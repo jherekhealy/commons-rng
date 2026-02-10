@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 /**
  * The tests the caching of calls to {@link IntProvider#nextInt()} are used as
  * the source for {@link IntProvider#nextInt()} and
@@ -32,7 +34,9 @@ class IntProviderTest {
      * {@link IntProvider#next()}.
      */
     static final class FlipIntProvider extends IntProvider {
-        /** The value. */
+        /**
+         * The value.
+         */
         private int value;
 
         /**
@@ -67,13 +71,13 @@ class IntProviderTest {
             for (int j = 0; j < Integer.SIZE; j++) {
                 final boolean expected = i == j;
                 final int index = j;
-                Assertions.assertEquals(expected, provider.nextBoolean(), () -> "Pass 1, bit " + index);
+                assertEquals(expected, provider.nextBoolean(), () -> "Pass 1, bit " + index);
             }
             // The second pass should use the opposite bits
             for (int j = 0; j < Integer.SIZE; j++) {
                 final boolean expected = i != j;
                 final int index = j;
-                Assertions.assertEquals(expected, provider.nextBoolean(), () -> "Pass 2, bit " + index);
+                assertEquals(expected, provider.nextBoolean(), () -> "Pass 2, bit " + index);
             }
         }
     }
@@ -109,5 +113,14 @@ class IntProviderTest {
             return;
         }
         rng.nextBytes(bytes, start, len);
+    }
+
+    @Test
+    void testNextDoubleOpen() {
+        FlipIntProvider rng = new FlipIntProvider(0xffffffff);
+        final double doubleValue = rng.nextDouble();
+        rng = new FlipIntProvider(0xffffffff);
+        final double doubleOpenValue = rng.nextDoubleOpen();
+        assertEquals(doubleValue, doubleOpenValue, Math.pow(2, -20)); // last 20 bits may differ
     }
 }

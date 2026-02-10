@@ -199,6 +199,14 @@ public interface UniformRandomProvider {
     }
 
     /**
+     * Generates a {@code double} value between 0 (exclusive) and 1 (exclusive).
+     * @return a uniform random {@code double} value in the open interval {@code (0, 1)}.
+     */
+    default double nextDoubleOpen() {
+        return ((nextLong() >>> 12) + 0.5) * 0x1.0p-52;
+    }
+
+    /**
      * Generates a {@code double} value between 0 (inclusive) and the
      * specified {@code bound} (exclusive).
      *

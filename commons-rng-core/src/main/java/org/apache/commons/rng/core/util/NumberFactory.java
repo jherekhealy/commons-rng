@@ -89,6 +89,19 @@ public final class NumberFactory {
     }
 
     /**
+     * Creates a {@code double} in the  open interval {@code (0, 1)} from a {@code long} value.
+     *
+     * @param v Number.
+     * @return a {@code double} value in the open interval {@code (0, 1)}.
+     * @since 1.7
+     */
+    public static double makeDoubleOpen(long v) {
+        // Require the least significant 53-bits so shift the higher bits across
+        // Equivalent to mt19937-64.c genrand64_real3: ((genrand64_int64() >> 12) + 0.5) * (1.0/4503599627370496.0)
+        return ((v >>> 11) | 1) * DOUBLE_MULTIPLIER;
+    }
+
+    /**
      * Creates a {@code double} from two {@code int} values.
      *
      * @param v Number (high order bits).
@@ -102,6 +115,24 @@ public final class NumberFactory {
         final long high = ((long) (v >>> 6)) << 27;  // 26-bits remain
         final int low = w >>> 5;                     // 27-bits remain
         return (high | low) * DOUBLE_MULTIPLIER;
+    }
+
+    /**
+     * Creates a {@code double} from two {@code int} values.
+     * The low order bits of v will be mixed (xor-ed) with the high order bits of w.
+     *
+     * @param v Number (high order bits).
+     * @param w Number (low order bits).
+     * @return a {@code double} value in the open interval {@code (0, 1)}.
+     * @since 1.7
+     */
+    public static double makeDoubleOpen(int v,
+                                        int w) {
+        // Takes the highest 21 bits of v for the most significant digits,
+        // and mixes with the bits of w for the remaining digits.
+        final long high = Integer.toUnsignedLong(v) << 21;
+        final long low = Integer.toUnsignedLong(w);
+        return ((high ^ low)  | 1) * DOUBLE_MULTIPLIER;
     }
 
     /**

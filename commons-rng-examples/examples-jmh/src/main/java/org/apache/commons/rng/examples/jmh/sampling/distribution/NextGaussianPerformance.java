@@ -24,6 +24,8 @@ import org.apache.commons.rng.sampling.distribution.MarsagliaNormalizedGaussianS
 import org.apache.commons.rng.sampling.distribution.NormalizedGaussianSampler;
 import org.apache.commons.rng.sampling.distribution.ZigguratNormalizedGaussianSampler;
 import org.apache.commons.rng.sampling.distribution.ZigguratSampler;
+import org.apache.commons.rng.sampling.distribution.ContinuousInverseCumulativeProbabilityFunction;
+import org.apache.commons.rng.sampling.distribution.InverseTransformContinuousSampler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -64,7 +66,9 @@ public class NextGaussianPerformance {
      */
     @State(Scope.Benchmark)
     public static class JDKSource {
-        /** JDK's generator. */
+        /**
+         * JDK's generator.
+         */
         private Random random;
 
         /**
@@ -74,7 +78,9 @@ public class NextGaussianPerformance {
             return random;
         }
 
-        /** Instantiates sampler. */
+        /**
+         * Instantiates sampler.
+         */
         @Setup
         public void setup() {
             random = new Random();
@@ -88,14 +94,19 @@ public class NextGaussianPerformance {
      */
     @State(Scope.Benchmark)
     public static class Sources extends RandomSources {
-        /** The sampler type. */
+        /**
+         * The sampler type.
+         */
         @Param({"BoxMullerNormalizedGaussianSampler",
-                "MarsagliaNormalizedGaussianSampler",
-                "ZigguratNormalizedGaussianSampler",
-                "ZigguratSampler.NormalizedGaussian"})
+            "MarsagliaNormalizedGaussianSampler",
+            "ZigguratNormalizedGaussianSampler",
+            "ZigguratSampler.NormalizedGaussian",
+            "ContinuousInverseGaussianSampler"})
         private String samplerType;
 
-        /** The sampler. */
+        /**
+         * The sampler.
+         */
         private NormalizedGaussianSampler sampler;
 
         /**
@@ -105,7 +116,9 @@ public class NextGaussianPerformance {
             return sampler;
         }
 
-        /** Instantiates sampler. */
+        /**
+         * Instantiates sampler.
+         */
         @Override
         @Setup
         public void setup() {
@@ -119,6 +132,31 @@ public class NextGaussianPerformance {
                 sampler = ZigguratNormalizedGaussianSampler.of(rng);
             } else if ("ZigguratSampler.NormalizedGaussian".equals(samplerType)) {
                 sampler = ZigguratSampler.NormalizedGaussian.of(rng);
+            } else if ("ContinuousInverseGaussianSampler".equals(samplerType)) {
+                final org.apache.commons.math3.distribution.NormalDistribution dist =
+                    new org.apache.commons.math3.distribution.NormalDistribution();
+                ContinuousInverseCumulativeProbabilityFunction function =
+                    new ContinuousInverseCumulativeProbabilityFunction() {
+                        @Override
+                        public double inverseCumulativeProbability(double p) {
+                            //Note: the default implementation of commons math
+                            // loses some accuracy for negative arguments.
+                            return dist.inverseCumulativeProbability(p);
+                        }
+
+                        @Override
+                        public String toString() {
+                            return dist.toString();
+                        }
+                    };
+                final org.apache.commons.rng.sampling.distribution.SharedStateContinuousSampler samplerContinuous =
+                    InverseTransformContinuousSampler.of(rng, function);
+                sampler = new NormalizedGaussianSampler() {
+                    @Override
+                    public double sample() {
+                        return samplerContinuous.sample();
+                    }
+                };
             } else {
                 throw new IllegalStateException("Unknown sampler type: " + samplerType);
             }
@@ -126,7 +164,7 @@ public class NextGaussianPerformance {
     }
 
     /**
-     * Baseline for the JMH timing overhead for production of an {@code double} value.
+     * Baseline for the timing overhead for production of an {@code double} value.
      *
      * @return the {@code double} value
      */
